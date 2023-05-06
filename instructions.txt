@@ -1,0 +1,6 @@
+li s0, 12
+sw x10, 4(x0)
+addi x10, x0, 13
+lw x12, 4(x0)
+li x13, 1730
+addi x11, x0, 11
