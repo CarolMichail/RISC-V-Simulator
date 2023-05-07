@@ -20,8 +20,9 @@ using namespace std;
 #define MEM_SIZE 2056
 int memory[MEM_SIZE];
 
-map<unsigned int, string> AdressInst;
-map<string, unsigned int> AdressLabel;
+map<unsigned int, string> AddressInst;
+map<string, unsigned int> AddressLabel;
+map<int,string>InstructionMem;
 map<int, int> registers;
 map<string, int> labels;
 int PC = 0;
@@ -48,13 +49,13 @@ map<int, int> initialize_registers() {
     return registers;
 }
 
-void checkLabelExists(string label){
-    if(AdressLabel.find(label) ==AdressLabel.end()){
-        cout<<"You are trying to jump to a label that does not exist. The program will terminate\n";
-        system("pause");
-        exit(1);
-    }
-}
+//void checkLabelExists(string label){
+//    if(AdressLabel.find(label) ==AdressLabel.end()){
+//        cout<<"You are trying to jump to a label that does not exist. The program will terminate\n";
+//        system("pause");
+//        exit(1);
+//    }
+//}
 
 void Printregs(map<int, int> registers){
     // Print out the register values
@@ -63,6 +64,7 @@ void Printregs(map<int, int> registers){
         int value = registers[reg_num];
         cout << "x"<< reg_num << " = " << value << endl;
     }
+    
 }
 
 
@@ -208,32 +210,6 @@ void sra(const vector<string> operands, map<int, int>& registers) {
     registers[rd] = ((int32_t)registers[rs1]) >> shamt;
 
 }
-void jump(const string label_name, int &PC) {
-    // Get the address of the label from the AdressLabel map
-    unsigned int label_addr = AdressLabel[label_name];
-
-    // Set the PC to the address of the label
-    PC = label_addr;
-}
-void jumping(string label, int& pc, map<string, int>& labels) {
-    // Jump to the label if it exists in the labels map
-    if (labels.find(label) != labels.end()) {
-        pc = labels[label];
-    } else {
-        cout << "Error: Label " << label << " not found." << endl;
-        exit(1);
-    }
-}
-
-void bne(int rs1, int rs2, string label, int& pc, map<string, int>& labels) {
-    if (rs1 != rs2) {
-        // Jump to the label if the branch is satisfied
-        jumping(label, pc, labels);
-    } else {
-        // Do not jump to the label if the branch is not satisfied
-        pc += 4;
-    }
-}
 // Load immediate (li) instruction
 void li(int reg_num, int immediate, map<int, int>& registers) {
     registers[reg_num] = immediate;
@@ -242,14 +218,49 @@ int lw(int offset) {
   // Convert address to pointer with offset
   int* mem_ptr = &memory[(address + offset)/4];
   // Load data from memory and return
-  return *mem_ptr;
+    return *mem_ptr ;
 }
+int lh(int offset) {
+  // Convert address to pointer with offset
+  short* mem_ptr = (short*) &memory[(address + offset) / 4];
+  // Load data from memory and return
+  return (int) *mem_ptr;
+}
+
+//void lh (int rd, int rs1, int imm)
+//{
+//    if (rd == 0)
+//    {
+//        return;
+//
+//    } else
+//
+//    {
+//        int r = (registers[rs1] + imm) % 4;
+//        int address = registers[rs1] + imm - r;
+//
+//
+//
+//            registers[rd] = (memory[address] << (8 * (2 - r))) >> 16;
+//        }
+//
+//
+//    PC += 4;
+//}
 
 
 void sw(uint32_t data, int offset) {
   // Convert address to pointer with offset
   int* mem_ptr = &memory[(address + offset)/4];
   // Store data to memory
+  *mem_ptr = data;
+}
+void sh(uint16_t data, int offset) {
+  int addr = address + offset;
+  // Check that the address is aligned to a half-word boundary
+  // Convert address to pointer with offset
+  uint16_t* mem_ptr = reinterpret_cast<uint16_t*>(&memory[addr / 4]);
+  // Store half-word data to memory
   *mem_ptr = data;
 }
 
@@ -266,29 +277,27 @@ void lui(int reg_num, int immediate, map<int, int>& registers) {
     // LUI sets the upper 20 bits of the destination register
     registers[reg_num] = immediate << 12;
 }
-uint16_t lh(uint32_t address) {
-    uint8_t byte1 = memory[address];
-    uint8_t byte2 = memory[address + 1];
-    uint16_t halfword = (byte2 << 8) | byte1;
-    return halfword;
-}
+
 
 
 
 void ReadAndExecute(map<int, int>& registers) {
     ifstream file("/Users/muhammadabdelmohsen/Desktop/assemblyproj/instructions.txt");
-    string String;
+    string Line;
     int PC = 0;
     int Counterr=1;
     
     while (!file.eof()) {
         // Parse operands from instruction
-        getline(file, String);
-        istringstream iss(String);
+        getline(file, Line);
+        istringstream iss(Line);
         vector<string> operands;
         for (string operand; iss >> operand; ) {
             operands.push_back(operand);
+            InstructionMem[address]=Line;
+            address=+4;
         }
+       
         // Check for label and add it to the map
         if (operands[0].back() == ':') {
             labels[operands[0].substr(0, operands[0].size()-1)] = PC;
@@ -301,7 +310,19 @@ void ReadAndExecute(map<int, int>& registers) {
             int reg_num = stoi(operands[1].substr(1));
             registers[reg_num] = value;
             PC += 4;
-        } else if (operands[0] == "sw") {
+        } else if (operands[0] == "lh") {
+            int address = stoi(operands[2]);
+            int value = lh(address);
+            int reg_num = stoi(operands[1].substr(1));
+            registers[reg_num] = value;
+            PC += 4;
+        } else if (operands[0] == "sh") {
+            int address = stoi(operands[2]);
+            int reg_num = stoi(operands[1].substr(1));
+            int value = registers[reg_num];
+            sh(static_cast<uint16_t>(value), address);
+            PC += 4;
+          }else if (operands[0] == "sw") {
             int address = stoi(operands[2]);
             int reg_num = stoi(operands[1].substr(1));
             int value = registers[reg_num];
@@ -375,11 +396,11 @@ void ReadAndExecute(map<int, int>& registers) {
         } else if (operands[0] == "srli") {
             srli(operands, registers);
             PC += 4;
-        } else if (operands[0] == "j") {
-            string label_name = operands[1];
-            jump(label_name, PC);
-        } else if (operands[0] == "bne") {
-            bne(stoi(operands[1]), stoi(operands[2]), operands[3], PC, labels);
+//        } else if (operands[0] == "j") {
+//            string label_name = operands[1];
+//            jump(label_name, PC);
+//        } else if (operands[0] == "bne") {
+//            bne(stoi(operands[1]), stoi(operands[2]), operands[3], PC, labels);
         } else if (operands[0] == "lui") {
             int reg_num = stoi(operands[1].substr(1));
             int immediate = stoi(operands[2]);
