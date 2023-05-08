@@ -15,7 +15,7 @@ map<string, unsigned int> AddressLabel;
 map<int,string>InstructionMem;
 map<int, int> registers;
 map<int, string> labels;
-int PC = 0;
+int PC = 0x100;
 int reg_num = 31;
 int address=0x100;
 
@@ -371,7 +371,7 @@ void lui(int reg_num, int immediate) {
             // *****MOHEMMA AWYYYY
             // ANA HENA BA DAWAR ALA AWL KELMA LAW AKHERHA ":" BAKHOD EL KELMA WE ASTORE IT FEL MAP.
             // WHAT WE SHOULD DO IS TO DO ALL THE BRANCHES AND J TYPE INSTRUCTION BY SEARCHING FOR THE LABEL STORED AND GO TO IT.
-            //**MOHEMMA AWYYY
+            // *****MOHEMMA AWYYY
         } else if (operands[0].back() == ':') {
             labels[PC] = Line.substr(0, Line.size()-1);
             // DA ESM EL LABEL
@@ -380,12 +380,17 @@ void lui(int reg_num, int immediate) {
             cout<<"testing pc"<<PC<<"\n";
             
         } else if (operands[0]=="EBREAK"){
-            cout<<"Program Terminated With EBREAK\n";
+            for (const auto& instruction : instructions) {
+                cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
+            }
+            // ashan lama y break y print el haga abl maykhrog mn  el loop
+            cout<<"The program Counter= "<<PC<<"\n";
+            cout<<"**** Program Terminated With EBREAK ****\n";
             return;
             
         }
-       cout<<"The registers after "<<Counterr<<" Instruction ="<<"\n";
-            cout<<"With Program Counter of the next instruction = "<<PC<<"\n";
+       cout<<"The registers after "<<Counterr<<" Instruction "<<"\n";
+            cout<<"With Program Counter" <<PC<<"of the next instruction:\n";
         PrintingANDupdatingRegs(registers);
             
         Counterr++;
