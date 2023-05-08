@@ -1,9 +1,3 @@
-//  main.cpp
-//  ProjectAssembly
-//
-//  Created by muhammad abdelmohsen on 03/05/2023.
-//
-
 #include <iostream>
 #include<fstream>
 #include<map>
@@ -14,17 +8,13 @@
 
 using namespace std;
 
-// Example RISC-V memory map
-// Memory is a 32-bit address space
-// with 32-bit words stored at each address
 #define MEM_SIZE 2056
 int memory[MEM_SIZE];
 
-map<unsigned int, string> AddressInst;
 map<string, unsigned int> AddressLabel;
 map<int,string>InstructionMem;
 map<int, int> registers;
-map<string, int> labels;
+map<int, string> labels;
 int PC = 0;
 int reg_num = 31;
 int address=0x100;
@@ -48,16 +38,23 @@ map<int, int> initialize_registers() {
 
     return registers;
 }
-
-//void checkLabelExists(string label){
-//    if(AdressLabel.find(label) ==AdressLabel.end()){
-//        cout<<"You are trying to jump to a label that does not exist. The program will terminate\n";
-//        system("pause");
-//        exit(1);
-//    }
-//}
-
-void Printregs(map<int, int> registers){
+void jal(std::string labelName, std::map<int, std::string>& labels, int& PC, int& reg) {
+    // Get the address of the label from the map
+    auto it = labels.find(PC);
+    if (it == labels.end() || it->second != labelName) {
+        // The label is not found or it doesn't match the given name
+        std::cerr << "Error: label \"" << labelName << "\" not found" << std::endl;
+        return;
+    }
+    int labelAddr = it->first;
+    
+    // Save the return address in the register
+    reg = PC + 4;
+    
+    // Jump to the instruction after the label
+    PC = labelAddr + 4;
+}
+void PrintingANDupdatingRegs(map<int, int> registers){
     // Print out the register values
     for (int i = 0; i < registers.size(); i++) {
         int reg_num = i;
@@ -66,7 +63,6 @@ void Printregs(map<int, int> registers){
     }
     
 }
-
 
 void addi(const vector<string> operands, map<int, int>& registers) {
     int rd = stoi(operands[1].substr(1));
@@ -211,7 +207,7 @@ void sra(const vector<string> operands, map<int, int>& registers) {
 
 }
 // Load immediate (li) instruction
-void li(int reg_num, int immediate, map<int, int>& registers) {
+void li(int reg_num, int immediate) {
     registers[reg_num] = immediate;
 }
 int lw(int offset) {
@@ -226,28 +222,6 @@ int lh(int offset) {
   // Load data from memory and return
   return (int) *mem_ptr;
 }
-
-//void lh (int rd, int rs1, int imm)
-//{
-//    if (rd == 0)
-//    {
-//        return;
-//
-//    } else
-//
-//    {
-//        int r = (registers[rs1] + imm) % 4;
-//        int address = registers[rs1] + imm - r;
-//
-//
-//
-//            registers[rd] = (memory[address] << (8 * (2 - r))) >> 16;
-//        }
-//
-//
-//    PC += 4;
-//}
-
 
 void sw(uint32_t data, int offset) {
   // Convert address to pointer with offset
@@ -273,38 +247,32 @@ int lb(uint32_t address) {
     return byte;
 }
 
-void lui(int reg_num, int immediate, map<int, int>& registers) {
+void lui(int reg_num, int immediate) {
     // LUI sets the upper 20 bits of the destination register
     registers[reg_num] = immediate << 12;
 }
 
+    void ReadAndExecute() {
+        vector<pair<string, int>> instructions; // pair of instruction and address
 
-
-
-void ReadAndExecute(map<int, int>& registers) {
-    ifstream file("/Users/muhammadabdelmohsen/Desktop/assemblyproj/instructions.txt");
-    string Line;
-    int PC = 0;
-    int Counterr=1;
-    
-    while (!file.eof()) {
-        // Parse operands from instruction
-        getline(file, Line);
-        istringstream iss(Line);
-        vector<string> operands;
-        for (string operand; iss >> operand; ) {
-            operands.push_back(operand);
-            InstructionMem[address]=Line;
-            address=+4;
-        }
-       
-        // Check for label and add it to the map
-        if (operands[0].back() == ':') {
-            labels[operands[0].substr(0, operands[0].size()-1)] = PC;
-            continue;
-        }
-        // Check for branch instructions and calculate the target address
-        if (operands[0] == "lw") {
+        ifstream file("/Users/muhammadabdelmohsen/Desktop/assemblyproj/instructions.txt");
+        string Line;
+        int Counterr=1;
+        
+        // Read instructions and store them in the instructions vector
+        while (!file.eof()) {
+            // Parse operands from instruction
+            getline(file, Line);
+            istringstream iss(Line);
+            vector<string> operands;
+            for (string operand; iss >> operand; ) {
+                operands.push_back(operand);
+            }
+            
+           //ana ba store el instructions kolaha f vector
+            instructions.push_back(make_pair(Line, PC));
+            
+            if (operands[0] == "lw") {
             int address = stoi(operands[2]);
             int value = lw(address);
             int reg_num = stoi(operands[1].substr(1));
@@ -322,33 +290,31 @@ void ReadAndExecute(map<int, int>& registers) {
             int value = registers[reg_num];
             sh(static_cast<uint16_t>(value), address);
             PC += 4;
-          }else if (operands[0] == "sw") {
+        }else if (operands[0] == "sw") {
             int address = stoi(operands[2]);
             int reg_num = stoi(operands[1].substr(1));
             int value = registers[reg_num];
             sw(value, address);
             PC += 4;
-            
         } // Check for load immediate (li) instruction and execute it
         else if (operands[0] == "li") {
             int reg_num = stoi(operands[1].substr(1));
             int immediate = stoi(operands[2]);
-            li(reg_num, immediate, registers);
+            li(reg_num, immediate);
             PC += 4;
-    } else if (operands[0] == "lb") {
+        } else if (operands[0] == "lb") {
         int address = stoi(operands[2]);
         int reg_num = stoi(operands[1].substr(1));
         int value = lb(address);
         registers[reg_num] = value;
         PC += 4;
-    } else if (operands[0] == "sb") {
+        } else if (operands[0] == "sb") {
         int address = stoi(operands[2]);
         int reg_num = stoi(operands[1].substr(1));
         int8_t value = registers[reg_num] & 0xff;
         sb(value, address);
         PC += 4;
-    }
-        else if (operands[0] == "addi") {
+        }else if (operands[0] == "addi") {
             addi(operands, registers);
             PC += 4;
         } else if (operands[0] == "add") {
@@ -396,27 +362,48 @@ void ReadAndExecute(map<int, int>& registers) {
         } else if (operands[0] == "srli") {
             srli(operands, registers);
             PC += 4;
-//        } else if (operands[0] == "j") {
-//            string label_name = operands[1];
-//            jump(label_name, PC);
-//        } else if (operands[0] == "bne") {
-//            bne(stoi(operands[1]), stoi(operands[2]), operands[3], PC, labels);
+
         } else if (operands[0] == "lui") {
             int reg_num = stoi(operands[1].substr(1));
             int immediate = stoi(operands[2]);
-            lui(reg_num, immediate, registers);
+            lui(reg_num, immediate);
             PC += 4;
+            // *****MOHEMMA AWYYYY
+            // ANA HENA BA DAWAR ALA AWL KELMA LAW AKHERHA ":" BAKHOD EL KELMA WE ASTORE IT FEL MAP.
+            // WHAT WE SHOULD DO IS TO DO ALL THE BRANCHES AND J TYPE INSTRUCTION BY SEARCHING FOR THE LABEL STORED AND GO TO IT.
+            //**MOHEMMA AWYYY
+        } else if (operands[0].back() == ':') {
+            labels[PC] = Line.substr(0, Line.size()-1);
+            // DA ESM EL LABEL
+            cout<< labels[PC]<<"\n";
+            // DA EL PC BTA3 el instruction elba3do
+            cout<<"testing pc"<<PC<<"\n";
+            
+        } else if (operands[0]=="EBREAK"){
+            cout<<"Program Terminated With EBREAK\n";
+            return;
+            
         }
-        cout<<"The registers after "<<Counterr<<" Instruction ="<<"\n";
-        Printregs(registers);
+       cout<<"The registers after "<<Counterr<<" Instruction ="<<"\n";
+            cout<<"With Program Counter of the next instruction = "<<PC<<"\n";
+        PrintingANDupdatingRegs(registers);
+            
         Counterr++;
+
     }
-    cout<<"The program Counter: "<<PC<<"\n";
+        for (const auto& instruction : instructions) {
+            cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
+        }
 }
 int main(){
     
     map<string, int> labels;
     map<int, int> registers = initialize_registers();
-    ReadAndExecute(registers);
+    ReadAndExecute();
 
 }
+//        } else if (operands[0] == "j") {
+//            string label_name = operands[1];
+//            jump(label_name, PC);
+//        } else if (operands[0] == "bne") {
+//            bne(stoi(operands[1]), stoi(operands[2]), operands[3], PC, labels);
