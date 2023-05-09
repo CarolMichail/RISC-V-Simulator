@@ -18,11 +18,14 @@ map<int, string> labels;
 int PC = 0x100;
 int reg_num = 31;
 int address=0x100;
-
+int bne(string labelName, const vector<string> operands);
+int beq(string labelName, const vector<string> operands);
+int bge(string labelName, const vector<string> operands);
+int blt(string labelName, const vector<string> operands) ;
 
 
 map<int, int> initialize_registers() {
-    ifstream file("/Users/muhammadabdelmohsen/Desktop/assemblyproj/registers.txt");
+    ifstream file("/Users/muhammadabdelmohsen/Desktop/ProjectAssembly/registers.txt");
     string line;
 
     while (getline(file, line)) {
@@ -38,22 +41,124 @@ map<int, int> initialize_registers() {
 
     return registers;
 }
-void jal(std::string labelName, std::map<int, std::string>& labels, int& PC, int& reg) {
+int jal(string labelName, const vector<string> operands) {
     // Get the address of the label from the map
-    auto it = labels.find(PC);
-    if (it == labels.end() || it->second != labelName) {
-        // The label is not found or it doesn't match the given name
-        std::cerr << "Error: label \"" << labelName << "\" not found" << std::endl;
-        return;
-    }
-    int labelAddr = it->first;
-    
-    // Save the return address in the register
-    reg = PC + 4;
-    
-    // Jump to the instruction after the label
-    PC = labelAddr + 4;
+   map <int ,string> :: iterator iter;
+   for (iter = labels.begin(); iter != labels.end(); iter++)
+            {
+                 if(operands[2]==(*iter).second){
+                    int rd = stoi(operands[1].substr(1));
+                    registers[rd] = PC + 4;
+                    return (*iter).first;
+                }
+            }
+    return 1;
 }
+int beq(string labelName, const vector<string> operands) {
+    int rs1 = stoi(operands[1].substr(1));
+    int rs2 = stoi(operands[2].substr(1));
+    labelName=operands[3];
+
+    if (registers[rs1] == registers[rs2]) {
+        // Get the address of the label from the map
+        map <int ,string> :: iterator iter;
+        for (iter = labels.begin(); iter != labels.end(); iter++) {
+            if(labelName == (*iter).second){
+                return (*iter).first;
+            }
+        }
+    } else  if (registers[rs1] != registers[rs2]){
+        bne(labelName, operands);
+    }
+    
+    return PC;
+}
+
+int bne(string labelName, const vector<string> operands) {
+    int rs1 = stoi(operands[1].substr(1));
+    int rs2 = stoi(operands[2].substr(1));
+    labelName=operands[3];
+
+    if (registers[rs1] != registers[rs2]) {
+        // Get the address of the label from the map
+        map <int ,string> :: iterator iter;
+        for (iter = labels.begin(); iter != labels.end(); iter++) {
+            if(labelName == (*iter).second){
+                return (*iter).first;
+            }
+        }
+    }
+    
+    return PC;
+}
+int bge(string labelName, const vector<string> operands) {
+    int rs1 = stoi(operands[1].substr(1));
+    int rs2 = stoi(operands[2].substr(1));
+    labelName=operands[3];
+
+    if (registers[rs1] >= registers[rs2]) {
+        // Get the address of the label from the map
+        map <int ,string> :: iterator iter;
+        for (iter = labels.begin(); iter != labels.end(); iter++) {
+            if(labelName == (*iter).second){
+                return (*iter).first;
+            }
+        }
+    }
+    
+    return PC;
+}
+int blt(string labelName, const vector<string> operands) {
+    int rs1 = stoi(operands[1].substr(1));
+    int rs2 = stoi(operands[2].substr(1));
+    labelName=operands[3];
+
+    if (registers[rs1] <= registers[rs2]) {
+        // Get the address of the label from the map
+        map <int ,string> :: iterator iter;
+        for (iter = labels.begin(); iter != labels.end(); iter++) {
+            if(labelName == (*iter).second){
+                return (*iter).first;
+            }
+        }
+    }
+    
+    return PC;
+}
+int bgtu(string labelName, const vector<string> operands) {
+    int rs1 = stoi(operands[1].substr(1));
+    int rs2 = stoi(operands[2].substr(1));
+    labelName = operands[3];
+
+    if (static_cast<unsigned int>(registers[rs1]) > static_cast<unsigned int>(registers[rs2])) {
+        // Get the address of the label from the map
+        map<int, string>::iterator iter;
+        for (iter = labels.begin(); iter != labels.end(); iter++) {
+            if (labelName == (*iter).second) {
+                return (*iter).first;
+            }
+        }
+    }
+    return PC;
+}
+
+int bltu(string labelName, const vector<string> operands) {
+    int rs1 = stoi(operands[1].substr(1));
+    int rs2 = stoi(operands[2].substr(1));
+    labelName = operands[3];
+
+    if (static_cast<unsigned int>(registers[rs1]) < static_cast<unsigned int>(registers[rs2])) {
+        // Get the address of the label from the map
+        map<int, string>::iterator iter;
+        for (iter = labels.begin(); iter != labels.end(); iter++) {
+            if (labelName == (*iter).second) {
+                return (*iter).first;
+            }
+        }
+    }
+    return PC;
+}
+
 void PrintingANDupdatingRegs(map<int, int> registers){
     // Print out the register values
     for (int i = 0; i < registers.size(); i++) {
@@ -255,23 +360,54 @@ void lui(int reg_num, int immediate) {
     void ReadAndExecute() {
         vector<pair<string, int>> instructions; // pair of instruction and address
 
-        ifstream file("/Users/muhammadabdelmohsen/Desktop/assemblyproj/instructions.txt");
+        ifstream file("/Users/muhammadabdelmohsen/Desktop/ProjectAssembly/instructions.txt");
         string Line;
         int Counterr=1;
-        
+        vector<string> operands;
         // Read instructions and store them in the instructions vector
         while (!file.eof()) {
             // Parse operands from instruction
             getline(file, Line);
             istringstream iss(Line);
-            vector<string> operands;
-            for (string operand; iss >> operand; ) {
-                operands.push_back(operand);
-            }
+          
             
            //ana ba store el instructions kolaha f vector
             instructions.push_back(make_pair(Line, PC));
-            
+            PC+=4;
+        }
+        PC=0x100;
+
+        for(int i=0;i<instructions.size();i++){
+            istringstream iss(instructions[i].first);
+            string l=iss.str();
+            if (l.back()== ':') {
+            l.pop_back();
+            labels.insert(make_pair(instructions[i].second,l));
+            // DA ESM EL LABEL
+            cout<< labels[instructions[i].second]<<" di al labels"<<"\n";
+            // DA EL PC BTA3 el instruction elba3do
+            cout<<"testing pc "<<PC<<"\n";
+            }
+        }
+     auto entry=instructions.begin();
+     bool branch=false;
+     while( entry!=instructions.end()) {
+       // cout<<entry.first<<" da al first\n"<<entry.second<<endl;
+        if (entry->second == PC) {
+     
+         istringstream iss(entry->first);
+           do {
+         string operand;
+         iss>>operand;
+        operands.push_back(operand);
+        
+        } while (iss);
+         }
+       
+
+          for (int j=0;j<operands.size();j++)
+            {cout<<operands[j]<<" ";}
+
             if (operands[0] == "lw") {
             int address = stoi(operands[2]);
             int value = lw(address);
@@ -372,12 +508,6 @@ void lui(int reg_num, int immediate) {
             // ANA HENA BA DAWAR ALA AWL KELMA LAW AKHERHA ":" BAKHOD EL KELMA WE ASTORE IT FEL MAP.
             // WHAT WE SHOULD DO IS TO DO ALL THE BRANCHES AND J TYPE INSTRUCTION BY SEARCHING FOR THE LABEL STORED AND GO TO IT.
             // *****MOHEMMA AWYYY
-        } else if (operands[0].back() == ':') {
-            labels[PC] = Line.substr(0, Line.size()-1);
-            // DA ESM EL LABEL
-            cout<< labels[PC]<<"\n";
-            // DA EL PC BTA3 el instruction elba3do
-            cout<<"testing pc"<<PC<<"\n";
             
         } else if (operands[0]=="EBREAK"){
             for (const auto& instruction : instructions) {
@@ -389,13 +519,128 @@ void lui(int reg_num, int immediate) {
             return;
             
         }
-       cout<<"The registers after "<<Counterr<<" Instruction "<<"\n";
-            cout<<"With Program Counter" <<PC<<"of the next instruction:\n";
-        PrintingANDupdatingRegs(registers);
+        else if (operands[0]=="jal"){
+        auto itt=instructions.begin();
+        int nt=0;
+        nt= jal(operands[2],operands);
+        PC=nt+4;
+        while(itt!=instructions.end())
+        {
+            if(itt->second==nt){
+               branch=true;
+               entry=itt;
+               cout<<entry->second<<" hena gowa al loop\n";
+               break;
+            }
+            itt++;
+        }
+         
+    }    else if (operands[0]=="bne"){
+        auto itt=instructions.begin();
+        int nt=0;
+        nt= bne(operands[2],operands);
+        PC=nt+4;
+        while(itt!=instructions.end())
+        {
+            if(itt->second==nt){
+               branch=true;
+               entry=itt;
+               cout<<entry->second<<" hena gowa al loop\n";
+               break;
+            }
+            itt++;
+        }
+        }
+    else if (operands[0]=="beq"){
+    auto itt=instructions.begin();
+    int nt=0;
+    nt= beq(operands[2],operands);
+    PC=nt+4;
+    while(itt!=instructions.end())
+    {
+        if(itt->second==nt){
+           branch=true;
+           entry=itt;
+           cout<<entry->second<<" hena gowa al loop\n";
+           break;
+        }
+        itt++;
+    }
+     
+    } else if (operands[0]=="blt"){
+        auto itt=instructions.begin();
+        int nt=0;
+        nt= blt(operands[2],operands);
+        PC=nt+4;
+        while(itt!=instructions.end())
+        {
+            if(itt->second==nt){
+               branch=true;
+               entry=itt;
+               cout<<entry->second<<" hena gowa al loop\n";
+               break;
+            }
+            itt++;
+        }
+        }
+    else if (operands[0]=="bge"){
+    auto itt=instructions.begin();
+    int nt=0;
+    nt= bge(operands[2],operands);
+    PC=nt+4;
+    while(itt!=instructions.end())
+    {
+        if(itt->second==nt){
+           branch=true;
+           entry=itt;
+           cout<<entry->second<<" hena gowa al loop\n";
+           break;
+        }
+        itt++;
+    }
+     
+    } else if (operands[0]=="bgtu"){
+        auto itt=instructions.begin();
+        int nt=0;
+        nt= bgtu(operands[2],operands);
+        PC=nt+4;
+        while(itt!=instructions.end())
+        {
+            if(itt->second==nt){
+               branch=true;
+               entry=itt;
+               cout<<entry->second<<" hena gowa al loop\n";
+               break;
+            }
+            itt++;
+        }
+         
+        }else if (operands[0]=="bltu"){
+            auto itt=instructions.begin();
+            int nt=0;
+            nt= bltu(operands[2],operands);
+            PC=nt+4;
+            while(itt!=instructions.end())
+            {
+                if(itt->second==nt){
+                   branch=true;
+                   entry=itt;
+                   cout<<entry->second<<" hena gowa al loop\n";
+                   break;
+                }
+                itt++;
+            }
+             
+            }
+         entry++;
+  
+       cout<<"The registers after "<<Counterr<<" Instructions "<<"\n";
+            cout<<"With Program Counter " <<PC<<" of the next instruction:\n";
+     PrintingANDupdatingRegs(registers);
             
         Counterr++;
-
-    }
+        operands.clear();
+        }
         for (const auto& instruction : instructions) {
             cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
         }
