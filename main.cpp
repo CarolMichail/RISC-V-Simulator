@@ -58,10 +58,11 @@ void auipc(const vector<string> operands);
 void sb(uint8_t value, uint32_t address);
 int lb(uint32_t address);
 void lui(int reg_num, int immediate);
+int jalr( const vector<string> operands, int PC);
 int jal(string labelName, const vector<string> operands);
 
 map<int, int> initialize_registers() {
-    ifstream file("/Users/muhammadabdelmohsen/Desktop/ProjectAssembly/registers.txt");
+    ifstream file("registers.txt");
     string line;
 
     while (getline(file, line)) {
@@ -88,7 +89,7 @@ void PrintingANDupdatingRegs(){
     void ReadAndExecute() {
         vector<pair<string, int>> instructions; // pair of instruction and address
 
-        ifstream file("/Users/muhammadabdelmohsen/Desktop/ProjectAssembly/instructions.txt");
+        ifstream file("instructions.txt");
         string Line;
         int Counterr=1;
         vector<string> operands;
@@ -115,11 +116,11 @@ void PrintingANDupdatingRegs(){
             // DA EL PC BTA3 el instruction elba3do
             cout<<"testing pc "<<PC<<"\n";
             }
+           
         }
      auto entry=instructions.begin();
      bool branch=false;
      while( entry!=instructions.end()) {
-       // cout<<entry.first<<" da al first\n"<<entry.second<<endl;
         if (entry->second == PC) {
      
          istringstream iss(entry->first);
@@ -127,8 +128,13 @@ void PrintingANDupdatingRegs(){
          string operand;
          iss>>operand;
         operands.push_back(operand);
-        
+        // if(operands[2].find('(')!=string::npos);{
+        // operands[2] = operands[2].substr(operands[2].find('(')+1);
+        // operands[2].pop_back();
+        //}
+      
         } while (iss);
+
          }
           for (int j=0;j<operands.size();j++)
             {cout<<operands[j]<<" ";}
@@ -148,15 +154,23 @@ void PrintingANDupdatingRegs(){
         } else if (operands[0] == "sh") {
             int address = stoi(operands[2]);
             int reg_num = stoi(operands[1].substr(1));
+            if(reg_num==0){
+                return;
+            }
+            else{
             int value = registers[reg_num];
             sh(static_cast<uint16_t>(value), address);
-            PC += 4;
+            PC += 4;}
         }else if (operands[0] == "sw") {
             int address = stoi(operands[2]);
             int reg_num = stoi(operands[1].substr(1));
+            if(reg_num==0){
+                return;
+            }
+            else{
             int value = registers[reg_num];
             sw(value, address);
-            PC += 4;
+            PC += 4;}
         } // Check for load immediate (li) instruction and execute it
         else if (operands[0] == "li") {
             int reg_num = stoi(operands[1].substr(1));
@@ -164,9 +178,10 @@ void PrintingANDupdatingRegs(){
             li(reg_num, immediate);
             PC += 4;
         } else if (operands[0] == "lb") {
-        int address = stoi(operands[2]);
+        int offset = stoi(operands[2]);
+        cout<<offset<<"da operands[2]";
         int reg_num = stoi(operands[1].substr(1));
-        int value = lb(address);
+        int value = lb(offset);
         registers[reg_num] = value;
         PC += 4;
         } else if (operands[0] == "sb") {
@@ -178,60 +193,82 @@ void PrintingANDupdatingRegs(){
         }  else if (operands[0] == "auipc") {
             auipc(operands);
             PC += 4;
-        }else if (operands[0] == "addi") {
+            registers[0]=0;
+        }
+        else if (operands[0] == "addi") {
             addi(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "add") {
             add(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sub") {
             sub(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "or") {
             or_func(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "xor") {
             xor_func(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "and") {
             and_func(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "slli") {
             slli(operands);
             PC += 4;
+            registers[0]=0;
+
         } else if (operands[0] == "srai") {
             srai(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sra") {
             sra(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "srl") {
             srl(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sll") {
             sll(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sltu") {
             sltu(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "xori") {
             xori(operands);
             PC +=4;
+            registers[0]=0;
         } else if (operands[0] == "ori") {
             ori(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sltui") {
             sltui(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "srli") {
             srli(operands);
             PC += 4;
+            registers[0]=0;
 
+        } else if (operands[0].back() == ':') {
+            PC += 4;
         } else if (operands[0] == "lui") {
             int reg_num = stoi(operands[1].substr(1));
             int immediate = stoi(operands[2]);
             lui(reg_num, immediate);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0]=="EBREAK"){
             for (const auto& instruction : instructions) {
                 cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
@@ -241,11 +278,15 @@ void PrintingANDupdatingRegs(){
             cout<<"**** Program Terminated With EBREAK ****\n";
             return;
         }
+        else if(operands[0]=="jalr"){
+           PC= jalr(operands,PC);
+
+        }
         else if (operands[0]=="jal"){
-        auto itt=instructions.begin();
-        int nt=0;
-        nt= jal(operands[2],operands);
-        PC=nt+4;
+            auto itt=instructions.begin();
+            int nt=0;
+            nt= jal(operands[2],operands);
+            PC=nt+4;
         while(itt!=instructions.end())
         {
             if(itt->second==nt){
@@ -358,14 +399,14 @@ void PrintingANDupdatingRegs(){
   
        cout<<"The registers after "<<Counterr<<" Instructions "<<"\n";
             cout<<"With Program Counter " <<PC<<" of the next instruction:\n";
-     PrintingANDupdatingRegs();
+      PrintingANDupdatingRegs();
             
         Counterr++;
         operands.clear();
         }
-        for (const auto& instruction : instructions) {
-            cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
-        }
+        // for (const auto& instruction : instructions) {
+        //     cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
+        // }
 }
 int main(){
     
@@ -374,11 +415,6 @@ int main(){
     ReadAndExecute();
 
 }
-//        } else if (operands[0] == "j") {
-//            string label_name = operands[1];
-//            jump(label_name, PC);
-//        } else if (operands[0] == "bne") {
-//            bne(stoi(operands[1]), stoi(operands[2]), operands[3], PC, labels);
 int jal(string labelName, const vector<string> operands) {
     // Get the address of the label from the map
    map <int ,string> :: iterator iter;
@@ -643,6 +679,15 @@ void sw(uint32_t data, int offset) {
   // Store data to memory
   *mem_ptr = data;
 }
+int jalr( const vector<string> operands, int PC) {
+
+    int rd = stoi(operands[1].substr(1));
+    int rs1 = stoi(operands[2].substr(1));
+    int imm = stoi(operands[3]);
+    registers[rd]=PC+4;
+    int p;
+    return p=  registers[rs1]+imm;
+}
 void sh(uint16_t data, int offset) {
   int addr = address + offset;
   // Check that the address is aligned to a half-word boundary
@@ -654,14 +699,30 @@ void sh(uint16_t data, int offset) {
 void auipc(const vector<string> operands) {
     int rd = stoi(operands[1].substr(1));
     int immediate = stoi(operands[2]);
-    registers[rd] = PC + (immediate<<12);
+    registers[rd] = (PC-4) + (immediate<<12);
 }
 void sb(uint8_t value, uint32_t address) {
     memory[address] = value;
 }
-int lb(uint32_t address) {
-    int8_t byte = memory[address];
-    return byte;
+int lb(uint32_t addres) {
+    address=memory[addres];
+    char bin[32];
+    itoa(address,bin,2);
+    cout<<"bin "<<bin;
+    int x=  atoi(bin);
+    cout<<"x "<<x;
+    unsigned  mask;
+    mask = (1 << 8) - 1;
+    char lastXbits[8] = {x & mask};
+    int y=  atoi(lastXbits);
+    cout<<"y "<<y;
+
+    int8_t byte = memory[y];
+    cout<<"byte "<<byte;
+     int* mem_ptr = &memory[(address + addres)/4];
+  // Load data from memory and return
+    return *mem_ptr ;
+    
 }
 void lui(int reg_num, int immediate) {
     // LUI sets the upper 20 bits of the destination register
