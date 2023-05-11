@@ -8,10 +8,7 @@
 using namespace std;
 
 //Virtual Mmeory
-#define MEM_SIZE 2056
-int memory[MEM_SIZE];
-
-//Maps for storing
+map <int, int> memory;
 map<string, unsigned int> AddressLabel;
 map<int,string>InstructionMem;
 map<int, int> registers;
@@ -21,7 +18,30 @@ map<int, string> labels;
 int PC = 0x100;
 int reg_num = 31;
 int address=0x100;
-
+string decimalToBinary(int num)
+{
+    string binary;
+    for (int i = 31; i >= 0; i--)
+    {
+        int bit = (num >> i) & 1;
+        binary += to_string(bit);
+    }
+    return binary;
+}
+int binaryToDecimal(string binary)
+{
+    int decimal = 0;
+    int position = 1;
+    for (int i = binary.size() - 1; i >= 0; i--)
+    {
+        if (binary[i] == '1')
+        {
+            decimal += position;
+        }
+        position *= 2;
+    }
+    return decimal;
+}
 //Instructions
 int bne(string labelName, const vector<string> operands);
 int beq(string labelName, const vector<string> operands);
@@ -48,17 +68,19 @@ void sltui(const vector<string> operands);
 void sltu(const vector<string> operands);
 void srli(const vector<string> operands);
 void sra(const vector<string> operands);
-int lb(uint32_t address);
-void li(int reg_num, int immediate);
-int lw(int offset);
-int lh(int offset);
+void lb(string address);
+void lbu(string address);
+void lw(string line);
+void lh(string offset);
+void lhu(string offset);
 void sw(uint32_t data, int offset);
 void sh(uint16_t data, int offset);
 void auipc(const vector<string> operands);
 void sb(uint8_t value, uint32_t address);
-int lb(uint32_t address);
 void lui(int reg_num, int immediate);
+int jalr( const vector<string> operands, int PC);
 int jal(string labelName, const vector<string> operands);
+
 
 map<int, int> initialize_registers() {
     ifstream file("/Users/muhammadabdelmohsen/Desktop/ProjectAssembly/registers.txt");
@@ -79,16 +101,41 @@ map<int, int> initialize_registers() {
 }
 void PrintingANDupdatingRegs(){
     // Print out the register values
+   
     for (int i = 0; i < registers.size(); i++) {
         int reg_num = i;
         int value = registers[reg_num];
         cout << "x"<< reg_num << " = " << value << endl;
     }
-}
+   
+      for (int i = 0; i < registers.size(); i++) {
+        int reg_num = i;
+        int value = registers[reg_num];
+       
+    }
+ 
+} ifstream files("/Users/muhammadabdelmohsen/Desktop/ProjectAssembly/data.txt");
+
     void ReadAndExecute() {
+      
         vector<pair<string, int>> instructions; // pair of instruction and address
 
         ifstream file("/Users/muhammadabdelmohsen/Desktop/ProjectAssembly/instructions.txt");
+         string lines;
+         int addresss;
+         int vall;
+         while (getline(files, lines)) {
+             // Parse operands from instruction
+             string ad = lines.substr(0,lines.find(','));
+             addresss=stoi(ad);
+             addresss=addresss/4;
+             string  val =lines.substr(lines.find(',')+1);
+             vall=stoi(val);
+             memory[addresss]= vall;
+         }
+        cout<<"Memory:\n";
+         for(int i=0;i<50;i++)
+         {cout<<memory[i]<<endl;}
         string Line;
         int Counterr=1;
         vector<string> operands;
@@ -97,8 +144,6 @@ void PrintingANDupdatingRegs(){
             // Parse operands from instruction
             getline(file, Line);
             istringstream iss(Line);
-
-           //ana ba store el instructions kolaha f vector
             instructions.push_back(make_pair(Line, PC));
             PC+=4;
         }
@@ -110,16 +155,13 @@ void PrintingANDupdatingRegs(){
             if (l.back()== ':') {
             l.pop_back();
             labels.insert(make_pair(instructions[i].second,l));
-            // DA ESM EL LABEL
-            cout<< labels[instructions[i].second]<<" di al labels"<<"\n";
-            // DA EL PC BTA3 el instruction elba3do
-            cout<<"testing pc "<<PC<<"\n";
+                    
             }
+           
         }
      auto entry=instructions.begin();
      bool branch=false;
      while( entry!=instructions.end()) {
-       // cout<<entry.first<<" da al first\n"<<entry.second<<endl;
         if (entry->second == PC) {
      
          istringstream iss(entry->first);
@@ -127,47 +169,52 @@ void PrintingANDupdatingRegs(){
          string operand;
          iss>>operand;
         operands.push_back(operand);
-        
+     
+      
         } while (iss);
+
          }
           for (int j=0;j<operands.size();j++)
             {cout<<operands[j]<<" ";}
 
             if (operands[0] == "lw") {
-            int address = stoi(operands[2]);
-            int value = lw(address);
-            int reg_num = stoi(operands[1].substr(1));
-            registers[reg_num] = value;
-            PC += 4;
+                lw(Line);
+               PC += 4;
         } else if (operands[0] == "lh") {
-            int address = stoi(operands[2]);
-            int value = lh(address);
-            int reg_num = stoi(operands[1].substr(1));
-            registers[reg_num] = value;
+            lh(Line);
+           
+            PC += 4;
+        } else if (operands[0] == "lhu") {
+            lhu(Line);
+            PC += 4;
+        } else if (operands[0] == "lbu") {
+            lbu(Line);
             PC += 4;
         } else if (operands[0] == "sh") {
             int address = stoi(operands[2]);
             int reg_num = stoi(operands[1].substr(1));
+            if(reg_num==0){
+                return;
+            }
+            else{
             int value = registers[reg_num];
             sh(static_cast<uint16_t>(value), address);
-            PC += 4;
+            PC += 4;}
         }else if (operands[0] == "sw") {
             int address = stoi(operands[2]);
             int reg_num = stoi(operands[1].substr(1));
+            if(reg_num==0){
+                return;
+            }
+            else{
             int value = registers[reg_num];
             sw(value, address);
-            PC += 4;
+            PC += 4;}
         } // Check for load immediate (li) instruction and execute it
-        else if (operands[0] == "li") {
-            int reg_num = stoi(operands[1].substr(1));
-            int immediate = stoi(operands[2]);
-            li(reg_num, immediate);
-            PC += 4;
-        } else if (operands[0] == "lb") {
-        int address = stoi(operands[2]);
+        else if (operands[0] == "lb") {
+        int offset = stoi(operands[2]);
         int reg_num = stoi(operands[1].substr(1));
-        int value = lb(address);
-        registers[reg_num] = value;
+        lb(Line);
         PC += 4;
         } else if (operands[0] == "sb") {
         int address = stoi(operands[2]);
@@ -178,74 +225,100 @@ void PrintingANDupdatingRegs(){
         }  else if (operands[0] == "auipc") {
             auipc(operands);
             PC += 4;
-        }else if (operands[0] == "addi") {
+            registers[0]=0;
+        }
+        else if (operands[0] == "addi") {
             addi(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "add") {
             add(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sub") {
             sub(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "or") {
             or_func(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "xor") {
             xor_func(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "and") {
             and_func(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "slli") {
             slli(operands);
             PC += 4;
+            registers[0]=0;
+
         } else if (operands[0] == "srai") {
             srai(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sra") {
             sra(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "srl") {
             srl(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sll") {
             sll(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sltu") {
             sltu(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "xori") {
             xori(operands);
             PC +=4;
+            registers[0]=0;
         } else if (operands[0] == "ori") {
             ori(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "sltui") {
             sltui(operands);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0] == "srli") {
             srli(operands);
             PC += 4;
+            registers[0]=0;
 
+        } else if (operands[0].back() == ':') {
+            PC += 4;
         } else if (operands[0] == "lui") {
             int reg_num = stoi(operands[1].substr(1));
             int immediate = stoi(operands[2]);
             lui(reg_num, immediate);
             PC += 4;
+            registers[0]=0;
         } else if (operands[0]=="EBREAK"){
             for (const auto& instruction : instructions) {
                 cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
-            } 
-            // ashan lama y break y print el haga abl maykhrog mn  el loop
+            }
+          
             cout<<"The program Counter= "<<PC<<"\n";
             cout<<"**** Program Terminated With EBREAK ****\n";
             return;
         }
+        else if(operands[0]=="jalr"){
+           PC= jalr(operands,PC);
+
+        }
         else if (operands[0]=="jal"){
-        auto itt=instructions.begin();
-        int nt=0;
-        nt= jal(operands[2],operands);
-        PC=nt+4;
+            auto itt=instructions.begin();
+            int nt=0;
+            nt= jal(operands[2],operands);
+            PC=nt+4;
         while(itt!=instructions.end())
         {
             if(itt->second==nt){
@@ -355,30 +428,27 @@ void PrintingANDupdatingRegs(){
              
             }
          entry++;
-  
-       cout<<"The registers after "<<Counterr<<" Instructions "<<"\n";
+         cout<<"\n";
+            cout<<"The registers after "<<Counterr<<" Instructions "<<"\n";
             cout<<"With Program Counter " <<PC<<" of the next instruction:\n";
-     PrintingANDupdatingRegs();
+          
+      PrintingANDupdatingRegs();
             
         Counterr++;
         operands.clear();
         }
-        for (const auto& instruction : instructions) {
-            cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
+     
+         for (const auto& instruction : instructions) {
+             cout << "Line: " << instruction.first << ", PC: " << instruction.second << '\n';
         }
+         
 }
 int main(){
     
     map<string, int> labels;
     map<int, int> registers = initialize_registers();
     ReadAndExecute();
-
 }
-//        } else if (operands[0] == "j") {
-//            string label_name = operands[1];
-//            jump(label_name, PC);
-//        } else if (operands[0] == "bne") {
-//            bne(stoi(operands[1]), stoi(operands[2]), operands[3], PC, labels);
 int jal(string labelName, const vector<string> operands) {
     // Get the address of the label from the map
    map <int ,string> :: iterator iter;
@@ -621,49 +691,180 @@ void sra(const vector<string> operands) {
 
     registers[rd] = ((int32_t)registers[rs1]) >> shamt;
 }
-// Load immediate (li) instruction
-void li(int reg_num, int immediate) {
-    registers[reg_num] = immediate;
+
+void lw(string  operands) {
+   istringstream iss(operands);
+    vector<std::string> tokens;
+    string token;
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    string instructionName = tokens[0];
+    int destinationRegister = stoi(tokens[1].substr(1, tokens[1].size()-1));
+    string thirdToken = tokens[2];
+    size_t openParenthesisPos = thirdToken.find('(');
+    size_t closeParenthesisPos = thirdToken.find(')');
+    string immediateValue = thirdToken.substr(0, openParenthesisPos);
+    int sourceRegister = stoi(thirdToken.substr(openParenthesisPos + 2, closeParenthesisPos - openParenthesisPos - 1));
+    int imm = stoi(immediateValue) + registers[sourceRegister];
+    int value= memory[imm];
+      registers[destinationRegister]=value;
+
 }
-int lw(int offset) {
-  // Convert address to pointer with offset
-  int* mem_ptr = &memory[(address + offset)/4];
-  // Load data from memory and return
-    return *mem_ptr ;
+void lh(string operands) {
+    cout<<operands<<endl;
+    istringstream iss(operands);
+    vector<std::string> tokens;
+    string token;
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    string instructionName = tokens[0];
+    int destinationRegister = stoi(tokens[1].substr(1, tokens[1].size()-1));
+    string thirdToken = tokens[2];
+    size_t openParenthesisPos = thirdToken.find('(');
+    size_t closeParenthesisPos = thirdToken.find(')');
+    string immediateValue = thirdToken.substr(0, openParenthesisPos);
+    int sourceRegister = stoi(thirdToken.substr(openParenthesisPos + 2, closeParenthesisPos - openParenthesisPos - 1));
+    int imm = stoi(immediateValue) + registers[sourceRegister];
+    int value= memory[imm];
+    string take = decimalToBinary(value);
+    string without= take.substr(16, 16);
+    cout<<without<<endl;
+    if (without[0]=='0')
+    {
+        string zeros="0000000000000000";
+        without =(zeros+without);
+    }
+    else if(without[0]=='1')
+    {
+       string ones="1111111111111111";
+        without =(ones+without);
+    }
+    cout<<without<<endl;
+    int with= binaryToDecimal(without);
+    cout<<with;
+    registers[destinationRegister]=with;
+   
 }
-int lh(int offset) {
-  // Convert address to pointer with offset
-  short* mem_ptr = (short*) &memory[(address + offset) / 4];
-  // Load data from memory and return
-  return (int) *mem_ptr;
+void lhu(string operands) {
+    cout<<operands<<endl;
+    istringstream iss(operands);
+    vector<std::string> tokens;
+    string token;
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    string instructionName = tokens[0];
+    int destinationRegister = stoi(tokens[1].substr(1, tokens[1].size()-1));
+    string thirdToken = tokens[2];
+    size_t openParenthesisPos = thirdToken.find('(');
+    size_t closeParenthesisPos = thirdToken.find(')');
+    string immediateValue = thirdToken.substr(0, openParenthesisPos);
+    int sourceRegister = stoi(thirdToken.substr(openParenthesisPos + 2, closeParenthesisPos - openParenthesisPos - 1));
+    int imm = stoi(immediateValue) + registers[sourceRegister];
+    int value= memory[imm];
+    string take = decimalToBinary(value);
+    string without= take.substr(16, 16);
+    cout<<without<<endl;
+        string zeros="0000000000000000";
+        without =(zeros+without);
+    cout<<without<<endl;
+    int with= binaryToDecimal(without);
+    cout<<with;
+    registers[destinationRegister]=with;
+   
 }
+
 void sw(uint32_t data, int offset) {
-  // Convert address to pointer with offset
-  int* mem_ptr = &memory[(address + offset)/4];
-  // Store data to memory
-  *mem_ptr = data;
+    
+    memory[offset] = data;
+}
+int jalr( const vector<string> operands, int PC) {
+
+    int rd = stoi(operands[1].substr(1));
+    int rs1 = stoi(operands[2].substr(1));
+    int imm = stoi(operands[3]);
+    registers[rd]=PC+4;
+    int p;
+    return p = registers[rs1]+imm;
 }
 void sh(uint16_t data, int offset) {
   int addr = address + offset;
-  // Check that the address is aligned to a half-word boundary
-  // Convert address to pointer with offset
+  
   uint16_t* mem_ptr = reinterpret_cast<uint16_t*>(&memory[addr / 4]);
-  // Store half-word data to memory
   *mem_ptr = data;
+    
 }
 void auipc(const vector<string> operands) {
     int rd = stoi(operands[1].substr(1));
     int immediate = stoi(operands[2]);
-    registers[rd] = PC + (immediate<<12);
+    registers[rd] = (PC-4) + (immediate<<12);
 }
 void sb(uint8_t value, uint32_t address) {
     memory[address] = value;
 }
-int lb(uint32_t address) {
-    int8_t byte = memory[address];
-    return byte;
+void lb(string operands) {
+    cout<<operands<<endl;
+    istringstream iss(operands);
+    vector<std::string> tokens;
+    string token;
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    string instructionName = tokens[0];
+    int destinationRegister = stoi(tokens[1].substr(1, tokens[1].size()-1));
+    string thirdToken = tokens[2];
+    size_t openParenthesisPos = thirdToken.find('(');
+    size_t closeParenthesisPos = thirdToken.find(')');
+    string immediateValue = thirdToken.substr(0, openParenthesisPos);
+    int sourceRegister = stoi(thirdToken.substr(openParenthesisPos + 2, closeParenthesisPos - openParenthesisPos - 1));
+    int imm = stoi(immediateValue) + registers[sourceRegister];
+    int value= memory[imm];
+    string take = decimalToBinary(value);
+    string without= take.substr(24, 8);
+    if (without[0]=='0')
+    {
+        string zeros="000000000000000000000000";
+        without =(zeros+without);
+    }
+    else if(without[0]=='1')
+    {
+       string ones="111111111111111111111111";
+        without =(ones+without);
+    }
+   
+    int with= binaryToDecimal(without);
+    registers[destinationRegister]=with;
+   
 }
+void lbu(string operands) {
+    cout<<operands<<endl;
+    istringstream iss(operands);
+    vector<std::string> tokens;
+    string token;
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    string instructionName = tokens[0];
+    int destinationRegister = stoi(tokens[1].substr(1, tokens[1].size()-1));
+    string thirdToken = tokens[2];
+    size_t openParenthesisPos = thirdToken.find('(');
+    size_t closeParenthesisPos = thirdToken.find(')');
+    string immediateValue = thirdToken.substr(0, openParenthesisPos);
+    int sourceRegister = stoi(thirdToken.substr(openParenthesisPos + 2, closeParenthesisPos - openParenthesisPos - 1));
+    int imm = stoi(immediateValue) + registers[sourceRegister];
+    int value= memory[imm];
+    string take = decimalToBinary(value);
+    string without= take.substr(24, 8);
+        string zeros="000000000000000000000000";
+        without =(zeros+without);
+    int with= binaryToDecimal(without);
+    registers[destinationRegister]=with;
+   
+}
+
 void lui(int reg_num, int immediate) {
-    // LUI sets the upper 20 bits of the destination register
+  
     registers[reg_num] = immediate << 12;
 }
