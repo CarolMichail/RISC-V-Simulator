@@ -1,0 +1,47 @@
+6 May 2023: 
+Sara:
+	- wrote the txt files.
+	- function to read from the txt files correctly.
+7 May 2023:
+Carol: 
+	- map for the registers.
+Mohamed:
+	- memory map to read from the files.
+8 May 2023:
+Sara: 
+	- worked on the add and sub functions.
+	- worked on the addi and xori and ori functions.
+	- worked on the or and AND function.
+
+Mohamed: 
+	- worked on the andi and the slli and the srli functions.
+	- worked on the bge and and the bltu and the bgeu functions.
+	- worked on the beq and the bne and the blt functions.
+Carol:
+	- worked srl and the sra functions.
+	- worked on the srai and the slti and the sltiu functions.
+	- worked on the jal and the jalr functions.
+
+9 May 2023:
+
+Mohamed:
+	- worked on the sll function.
+	- worked on the lb and lh and lw funcitons.
+	- worked on the lui function.
+Carol:
+	- worked on the slt and the sltu functions.
+	- worked on the lbu and the lhu functions.
+	- worked on the auipc function.
+10 May 2023:
+Carol: 
+	- finished all the functions with debugging
+	- worked on the sb and sh and the sw functions.
+Mohamed:
+	- finished all the functions with debugging
+	- finished the sb and sh and the sw functions with debugging.
+11 May 2023:
+Sara:
+	- worked on the xor function.
+	- EBREAK Function.
+	- Checked all the functions with debugging.
+	- Finished the Report.
